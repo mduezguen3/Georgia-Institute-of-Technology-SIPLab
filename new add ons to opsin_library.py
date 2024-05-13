@@ -1,4 +1,4 @@
-def jaws():
+def jaws(): neuron?
     """Returns a model of Jaws, an opsin for optical neural inhibition.
 
     Params given in Table 1.
@@ -20,7 +20,7 @@ def jaws():
         ],
     )
 
-def np_hr():
+def np_hr(): opsin
     """Returns a model of NpHR, an opsin for optical neural inhibition.
 
     Params given in Table 1.
