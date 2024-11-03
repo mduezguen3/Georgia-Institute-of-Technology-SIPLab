@@ -1,0 +1,128 @@
+import numpy as np
+from scipy.optimize import curve_fit
+from attrs import define, field
+import matplotlib.pyplot as plt
+
+@define(eq=False)
+class ExcitationModel:
+    """Base class for excitation models."""
+    pass
+
+@define(eq=False)
+class LightExcitation(ExcitationModel):
+    """Models light-dependent excitation using a Hill function"""
+    
+    A: float = field(init=False)
+    Kd: float = field(init=False)
+    n: float = field(init=False)
+    
+    def hill_function(self, Irr_pre, A, Kd, n):
+        return A * (Irr_pre ** n) / ((Kd ** n) + (Irr_pre ** n))
+
+    def fit_excitation(self, light_intensities, responses):
+        # Fit Hill function to the light intensity vs response data
+        popt, _ = curve_fit(self.hill_function, light_intensities, responses, maxfev=10000)
+        self.A, self.Kd, self.n = popt
+
+    def __call__(self, Irr_pre):
+        return self.hill_function(Irr_pre, self.A, self.Kd, self.n)
+
+    model: str = field(default="exc_factor = hill_function(Irr_pre) : 1", init=False)
+
+@define(eq=False)
+class GECI:
+    """Base class for GECIs"""
+    light_dependent: bool = field(default=False)
+
+@define(eq=False)
+class LightDependent:
+    """Base class for light-dependent behavior"""
+    pass
+
+@define(eq=False)
+class LightDependentGECI(GECI, LightDependent):
+    """Light-dependent calcium indicator"""
+    exc_model: LightExcitation = field(kw_only=True)
+
+def gcamp6f(light_dependent=False, exc_model=None):
+    return LightDependentGECI(light_dependent=light_dependent, exc_model=exc_model if light_dependent else None)
+
+def gcamp6s(light_dependent=False, exc_model=None):
+    return LightDependentGECI(light_dependent=light_dependent, exc_model=exc_model if light_dependent else None)
+
+def gcamp3(light_dependent=False, exc_model=None):
+    return LightDependentGECI(light_dependent=light_dependent, exc_model=exc_model if light_dependent else None)
+
+def ogb1(light_dependent=False, exc_model=None):
+    return LightDependentGECI(light_dependent=light_dependent, exc_model=exc_model if light_dependent else None)
+
+def gcamp6rs09(light_dependent=False, exc_model=None):
+    return LightDependentGECI(light_dependent=light_dependent, exc_model=exc_model if light_dependent else None)
+
+def gcamp6rs06(light_dependent=False, exc_model=None):
+    return LightDependentGECI(light_dependent=light_dependent, exc_model=exc_model if light_dependent else None)
+
+def jgcamp7f(light_dependent=False, exc_model=None):
+    return LightDependentGECI(light_dependent=light_dependent, exc_model=exc_model if light_dependent else None)
+
+def jgcamp7s(light_dependent=False, exc_model=None):
+    return LightDependentGECI(light_dependent=light_dependent, exc_model=exc_model if light_dependent else None)
+
+def jgcamp7b(light_dependent=False, exc_model=None):
+    return LightDependentGECI(light_dependent=light_dependent, exc_model=exc_model if light_dependent else None)
+
+def jgcamp7c(light_dependent=False, exc_model=None):
+    return LightDependentGECI(light_dependent=light_dependent, exc_model=exc_model if light_dependent else None)
+
+def fit_light_dependence_curves(indicators, light_intensities, responses_dict):
+    """
+    Fit light dependence curves for multiple indicators.
+
+    Parameters
+    ----------
+    indicators : list
+        List of indicator functions (e.g., [gcamp6f, gcamp6s, gcamp3, ...]).
+    light_intensities : np.ndarray
+        Array of light intensity values.
+    responses_dict : dict
+        Dictionary where keys are indicator names and values are arrays of responses to light intensities.
+    """
+    fitted_indicators = {}
+    plt.figure(figsize=(10, 8))
+    
+    for i, indicator_fn in enumerate(indicators):
+        indicator_name = indicator_fn.__name__
+        if indicator_name in responses_dict:
+            responses = responses_dict[indicator_name]
+            exc_model = LightExcitation()
+            geci_model = indicator_fn(light_dependent=True, exc_model=exc_model)
+            geci_model.exc_model.fit_excitation(light_intensities, responses)
+            fitted_indicators[indicator_name] = geci_model
+            print(f"Fitted {indicator_name}: A={geci_model.exc_model.A}, Kd={geci_model.exc_model.Kd}, n={geci_model.exc_model.n}")
+            
+            # Plotting the results
+            plt.subplot(3, 4, i + 1)
+            plt.scatter(light_intensities, responses, label='Data')
+            fitted_responses = geci_model.exc_model(light_intensities)
+            plt.plot(light_intensities, fitted_responses, label='Fitted curve', color='red')
+            plt.title(indicator_name)
+            plt.xlabel('Light Intensity')
+            plt.ylabel('Response')
+            plt.legend()
+        else:
+            print(f"No response data for {indicator_name}")
+    
+    plt.tight_layout()
+    plt.show()
+    return fitted_indicators
+
+# Example usage
+indicators = [gcamp6f, gcamp6s, gcamp3, ogb1, gcamp6rs09, gcamp6rs06, jgcamp7f, jgcamp7s, jgcamp7b, jgcamp7c]
+light_intensities = np.array([0.1, 0.5, 1.0, 5.0, 10.0])  # Example light intensities
+responses_dict = {
+    "gcamp6f": np.array([0.1, 0.3, 0.6, 0.8, 1.0]),
+    "gcamp6s": np.array([0.1, 0.25, 0.5, 0.75, 1.0]),
+    # Add responses for other indicators here
+}
+
+fitted_indicators = fit_light_dependence_curves(indicators, light_intensities, responses_dict)
